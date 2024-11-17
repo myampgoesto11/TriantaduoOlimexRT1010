@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<chips chipVendor="NXP"
+       family="MIMXRT1010"
+       vendorURL="http://www.nxp.com"
+       chipURL="">
+   <chip name="MIMXRT1011xxxxx"
+         displayName="MIMXRT1011xxxxx"
+         xml_file="MIMXRT1011_internal.xml"
+         chipURL=""/>
+</chips>
