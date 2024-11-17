@@ -17,3 +17,12 @@ Created a new MCUXpresso workspace on my google drive and did the following:
     * fsl_edma.c/.h
 * This test version outputs only the Serial Data signal, NOT the bit clock or the Latch clock.
 * Also, the Serial Data Clock isn't correct yet.
+
+## Debugging:
+* Select the Green "Bug" icon dropdown, then "Debug Configurations"
+* Double Click the "JLink GDB SEGGER Interface Debugging", this will open a dialog titled:
+    * "evkmimxrt1010_flex_pwm JLink Debug" - Use the default selections!
+* Press Green "Play" button, with a scope you should see output on CON2 pin 1 (GPIO2_IO00)
+* After stopping the debug session just do the following to Debug Again:
+    * Press the Green "Bug" button, it will download.
+    * Press the Green "Play" button to run from Main.
