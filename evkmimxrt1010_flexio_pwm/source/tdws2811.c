@@ -68,8 +68,9 @@ AT_QUICKACCESS_SECTION_DATA_ALIGN(edma_tcd_t ledAppTcdMemoryPoolPtr[LED_APP_TCD_
  * Prototypes
  ******************************************************************************/
 void configurePins(void);
-void configureEDMA(void);
 void configureFlexIO(void);
+void configureEDMA(void);
+void flexIOShiftBufInit(void);
 void EDMA_Callback(edma_handle_t *handle, void *param, bool transferDone, uint32_t tcds);
 
 
@@ -78,35 +79,117 @@ void EDMA_Callback(edma_handle_t *handle, void *param, bool transferDone, uint32
  ******************************************************************************/
 void tdws2811Init(void)
 {
-    configurePins();
-    configureFlexIO();
-    configureEDMA();
-
 	// Fill the frame buffer with an incrementing value
 	for(uint8_t i = 0; i < LEDCOUNT; i++)
 	{
 		frameBuffer[0][i] = (i * 4);
 		frameBuffer[1][i] = (i * 10);
 	}
+
+	configurePins();
+    configureFlexIO();
+    flexIOShiftBufInit();
+    configureEDMA();
 }
+
+void tdws2811Run(void)
+{
+    // Get pointer to FLEX IO HW Block
+    FLEXIO_Type *p = DEMO_FLEXIO_BASEADDR;
+
+    bool testPWM = false;
+    uint32_t inc = 0;
+
+
+    while(!testPWM)
+    {
+
+    	if(g_Transfer_Done)
+    	{
+    		EDMA_StartTransfer(&g_EDMA_Handle);
+    		g_Transfer_Done = false;
+    	}
+
+    	if(p->SHIFTBUFBIS[1] != 0)
+    	{
+    		inc = p->SHIFTBUFBIS[1];
+    		inc++;
+    	}
+//    	p->SHIFTBUFBIS[1] = 0x1234567/* + inc++*/;  //Identifiable pattern should DMA fail to write SHIFTBUFBIS[1]
+    }
+}
+
+/*******************************************************************************
+ * Private
+ ******************************************************************************/
 
 void configurePins(void)
 {
+	/* Serial Data Signal: It uses the "Flex IO" module's internal signal naming of: FLEXIO1_IO06
+	 * - This maps to the RT1010 pin: "GPIO_SD_00"
+	 * - Which maps to the Olimex board signal: "GPIO2_IO00"
+	*/
+
     //  "4U" = 100 (binary) ALT4 — Select mux mode: ALT4 mux port: FLEXIO1_IO06 of instance: FLEXIO1
-    // Reference Manual pg. 299, GPIO_SD_00 Mux Setting.
+    // Reference Manual pg. 299, GPIO_SD_00 Mux Setting (IOMUXC_SW_MUX_CTL_PAD_GPIO_SD_00 Control Reg).
     IOMUXC_SetPinMux(IOMUXC_GPIO_SD_00_FLEXIO1_IO06, 4U);
 
     //  "F8U" = 100 (binary) ALT4 — Select mux mode: ALT4 mux port: FLEXIO1_IO06 of instance: FLEXIO1
     // Reference Manual pg. 377, GPIO_SD_00 pin Config.
+	// SW_PAD_CTL_PAD_GPIO_SD_00 SW PAD Control Register (IOMUXC_SW_PAD_CTL_PAD_GPIO_SD_00).
     //             Spd| Drv  |    | slew
     //                | Str  |    | rate
     //  0  | 0   |    F   |     8      |
     // 0000 0000 - 11 | 11  1| xx |  0
     //              3      7    --     0
     IOMUXC_SetPinConfig(IOMUXC_GPIO_SD_00_FLEXIO1_IO06, 0x00F8U);
+
+
+
+	/* Bit Clock Signal: It uses the "Flex IO" module's internal signal naming of: FLEXIO1_IO07
+	 * - This maps to the RT1010 pin: "GPIO_SD_01"
+	 * - Which maps to the Olimex board signal: "GPIO2_IO01"
+	*/
+
+    //  "4U" = 100 (binary) ALT4 — Select mux mode: ALT4 mux port: FLEXIO1_IO07 of instance: FLEXIO1
+    // Reference Manual pg. 298 GPIO_SD_01 Mux Setting (IOMUXC_SW_MUX_CTL_PAD_GPIO_SD_01 Control Reg).
+    IOMUXC_SetPinMux(IOMUXC_GPIO_SD_01_FLEXIO1_IO07, 4U);
+
+    //  "F8U" = 100 (binary) ALT4 — Select mux mode: ALT4 mux port: FLEXIO1_IO06 of instance: FLEXIO1
+    // Reference Manual pg. 375, GPIO_SD_01 Pin Config 
+	// SW_PAD_CTL_PAD_GPIO_SD_01 SW PAD Control Register (IOMUXC_SW_PAD_CTL_PAD_GPIO_SD_01).
+    //             Spd| Drv  |    | slew
+    //                | Str  |    | rate
+    //  0  | 0   |    F   |     8      |
+    // 0000 0000 - 11 | 11  1| xx |  0
+    //              3      7    --     0
+    IOMUXC_SetPinConfig(IOMUXC_GPIO_SD_01_FLEXIO1_IO07, 0x00F8U);
+
+
+
+	/* Latch Clock Signal: It uses the "Flex IO" module's internal signal naming of: FLEXIO1_IO08
+	 * - This maps to the RT1010 pin: "GPIO_SD_02"
+	 * - Which maps to the Olimex board signal: "GPIO2_IO02"
+	*/
+
+    //  "4U" = 100 (binary) ALT4 — Select mux mode: ALT4 mux port: FLEXIO1_IO08 of instance: FLEXIO1
+    // Reference Manual pg. 297 GPIO_SD_02 Mux Setting 
+	// SW_MUX_CTL_PAD_GPIO_SD_02 SW MUX Control Register (IOMUXC_SW_MUX_CTL_PAD_GPIO_SD_02)
+    IOMUXC_SetPinMux(IOMUXC_GPIO_SD_02_FLEXIO1_IO08, 4U);
+
+    //  "F8U" = 100 (binary) ALT4 — Select mux mode: ALT4 mux port: FLEXIO1_IO08 of instance: FLEXIO1
+    // Reference Manual pg. 373, GPIO_SD_02 Pin Config 
+	// SW_PAD_CTL_PAD_GPIO_SD_02 SW PAD Control Register (IOMUXC_SW_PAD_CTL_PAD_GPIO_SD_02).
+    //             Spd| Drv  |    | slew
+    //                | Str  |    | rate
+    //  0  | 0   |    F   |     8      |
+    // 0000 0000 - 11 | 11  1| xx |  0
+    //              3      7    --     0
+    IOMUXC_SetPinConfig(IOMUXC_GPIO_SD_02_FLEXIO1_IO08, 0x00F8U);
 }
 
-void configureEDMA(void) // From the "evkmimxrt1010_edma_scatter_gather" project
+// From the "evkmimxrt1010_edma_scatter_gather" project
+void configureEDMA(void) 
 {
     uint32_t i = 0;
     edma_transfer_config_t transferConfig;
@@ -232,13 +315,11 @@ void configureEDMA(void) // From the "evkmimxrt1010_edma_scatter_gather" project
 void configureFlexIO(void)
 {
 // From Ward's TDWS2811 Constructor Code:
-	  /* Pointer to the port structure in the FlexIO channel */
-	  /* p = &pFlex->port(); */
-	  /* Pointer to the port structure in the FlexIO channel */
-	  /* p = &pFlex->port(); */
+/* Pointer to the port structure in the FlexIO channel */
+/* p = &pFlex->port(); */
 
-	  /* Pointer to the hardware structure in the FlexIO channel */
-	  /* hw = &pFlex->hardware(); */
+/* Pointer to the hardware structure in the FlexIO channel */
+/* hw = &pFlex->hardware(); */
 
   FLEXIO_Type *p = DEMO_FLEXIO_BASEADDR;
 
@@ -309,63 +390,40 @@ void configureFlexIO(void)
   // TIMENA[10:8]  - 1 = Timer enabled on Timer N-1 enable
   p->TIMCFG[1] =   0x00000100;
 
+  // RM Pg. 1602 TRMCTL[x]
   // TRGSEL[29-24] - (Trigger Select)     1 = Shifter 0 Flag - MAYBE - SEE RM! IT'S COMPLICATED!
   // TRGPOL[23]    - (Trigger Polarity)   1 = Trigger active low
   // TRGSRC[22]    - (Trigger Source)     1 = Internal trigger selected
   // PINCFG[17:16] - (Timer Pin Config)   3 = Timer pin is output
-  // PINSEL[12:8]  - (Timer Pin Select)   4 = Timer pin output #FXIO_D4
+  // PINSEL[12:8]  - (Timer Pin Select)   4 = Timer pin output #FXIO_D7 - NOTE: This was #FXIO_D4 on the Teensy Board
   // PINPOL[7]     - (Timer Pin Polarity) 0 = Pin is active high
   // TIMOD [1:0]   - (Timer Mode)         1 = Dual 8-bit counters baud mode
-  p->TIMCTL[0] =   0x01C30401;
+  p->TIMCTL[0] =   0x01C30701;
 
   // TRGSEL[29-24] - (Trigger Select)     0 = Pin 0 - MAYBE - SEE RM! IT'S COMPLICATED!
   // TRGPOL[23]    - (Trigger Polarity)   0 = Trigger active HIGH
   // TRGSRC[22]    - (Trigger Source)     0 = External trigger selected
   // PINCFG[17:16] - (Timer Pin Config)   3 = Timer pin is output
-  // PINSEL[12:8]  - (Timer Pin Select)   5 = Timer pin output #FXIO_D5
+  // PINSEL[12:8]  - (Timer Pin Select)   5 = Timer pin output #FXIO_D8 - NOTE: This was #FXIO_D5 on the Teensy Board
   // PINPOL[7]     - (Timer Pin Polarity) 0 = Pin is active high
   // TIMOD [1:0]   - (Timer Mode)         3 = Single 16-bit counter mode
-  p->TIMCTL[1] =   0x00030503;
+  p->TIMCTL[1] =   0x00030803;
 
   p->TIMCMP[0] =   0x0000BF00; // 16 bit compare value = 48,896
   p->TIMCMP[1] =   0x0000001F; // 31
-
-  /* Finally, set up the values to be loaded into the shift registers at the beginning of each bit */
-  p->SHIFTBUF[0] = 0xA00000F;
-  p->SHIFTBUFBIS[1] = 0x5a5aa5a5;  //Identifiable pattern should DMA fail to write SHIFTBUFBIS[1]
-  p->SHIFTBUF[2] = 0xFFFFFFFF;
-  p->SHIFTBUF[3] = 0x00000000;
-  p->SHIFTBUF[3] = 0x00000000;
-
 }
 
-void tdws2811Run(void)
+void flexIOShiftBufInit(void)
 {
-    // Get pointer to FLEX IO HW Block
-    FLEXIO_Type *p = DEMO_FLEXIO_BASEADDR;
+	FLEXIO_Type *p = DEMO_FLEXIO_BASEADDR;
 
-    bool testPWM = false;
-    uint32_t inc = 0;
-
-
-    while(!testPWM)
-    {
-
-    	if(g_Transfer_Done)
-    	{
-    		EDMA_StartTransfer(&g_EDMA_Handle);
-    		g_Transfer_Done = false;
-    	}
-
-    	if(p->SHIFTBUFBIS[1] != 0)
-    	{
-    		inc = p->SHIFTBUFBIS[1];
-    		inc++;
-    	}
-//    	p->SHIFTBUFBIS[1] = 0x1234567/* + inc++*/;  //Identifiable pattern should DMA fail to write SHIFTBUFBIS[1]
-    }
+	/* Finally, set up the values to be loaded into the shift registers at the beginning of each bit */
+	p->SHIFTBUF[0] = 0xFFFFFFFF;
+	p->SHIFTBUFBIS[1] = 0xAAAA5555;  //Identifiable pattern should DMA fail to write SHIFTBUFBIS[1]
+	p->SHIFTBUF[2] = 0x00000000;
+	p->SHIFTBUF[3] = 0x00000000;
+	p->SHIFTBUF[3] = 0x00000000; // TODO: Is this just a copy & paste?
 }
-
 
 /*******************************************************************************
  * Callbacks
