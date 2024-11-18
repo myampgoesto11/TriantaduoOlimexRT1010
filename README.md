@@ -22,7 +22,8 @@ Created a new MCUXpresso workspace on my google drive and did the following:
 * Select the Green "Bug" icon dropdown, then "Debug Configurations"
 * Double Click the "JLink GDB SEGGER Interface Debugging", this will open a dialog titled:
     * "evkmimxrt1010_flex_pwm JLink Debug" - Use the default selections!
-* Press Green "Play" button, with a scope you should see output on CON2 pin 1 (GPIO2_IO00)
+* Press Green "Play" button (Yellow Rectangle on Left, Green Triangle on right - Not the Green Circle with the white triangle inside, that opens the "Run" dialog!)
+* Using a scope you should see output on CON2 pin 1 (GPIO2_IO00)
 * After stopping the debug session just do the following to Debug Again:
     * Press the Green "Bug" button, it will download.
     * Press the Green "Play" button to run from Main.
